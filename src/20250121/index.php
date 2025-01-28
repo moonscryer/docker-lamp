@@ -1,54 +1,70 @@
 <?php
 require('db.inc.php');
+
+// ini_set('display_errors', '1');
+// ini_set('display_startup_errors', '1');
+// error_reporting(E_ALL);
+
+$items = getDbImages();
+function randomName()
+{
+    return bin2hex(random_bytes(16));
+}
+
 $errors = [];
 
-print '<pre>';
-print_r($_FILES);
-print '</pre>';
+// print '<pre>';
+// print_r($_FILES);
+// print '</pre>';
 
+if (isset($_POST["formSubmit"])) {
 
+    if ($_FILES["imgupload"]["error"] > 0) {
+        $errors[] = "Error: " . $_FILES["imgupload"]["error"];
+        $upload = 0;
+    } else {
+        $upload = 1;
+    }
 
-// $inputUrl = '';
+    if (isset($_FILES["imgupload"]["tmp_name"]) && !empty($_FILES["imgupload"]["tmp_name"])) {
+        $check = getimagesize($_FILES["imgupload"]["tmp_name"]);
+        if ($check !== false) {
+            $upload = 1;
+        } else {
+            $errors[] = "File is not an image.";
+            $upload = 0;
+        }
+    }
 
-// if (isset($_POST['formSubmit'])) {
+    $imageFileType = strtolower(pathinfo($_FILES["imgupload"]["name"], PATHINFO_EXTENSION));
 
-//     // validation for URL
-//     if (!isset($_POST['inputUrl'])) {
-//         $errors[] = "URL is required";
-//     } else {
-//         $inputUrl = $_POST['inputUrl'];
+    // Allow only jpg, jpeg, png
+    if (!in_array($imageFileType, ["jpg", "jpeg", "png"])) {
+        $errors[] = "Please add a JPG, JPEG or PNG file.";
+        $upload = 0;
+    }
 
-//         // check if URL is no longer than 255 characters
-//         if (strlen($inputUrl) == 0) {
-//             $errors[] = "URL is required";
-//         }
+    // Limit file size to 1MB
+    if ($_FILES["imgupload"]["size"] > 1000000) {
+        $errors[] = "File is too large.";
+        $upload = 0;
+    }
 
-//         // check if URL is valid
-//         if (!preg_match("/(http|https|ftp|ftps)\:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,3}(\/\S*)?/", $inputUrl)) {
-//             $errors[] = "URL is not valid";
-//         }
-//     }
+    // no errors , upload file 
+    if ($upload === 1) {
+        $target_dir = "uploads/";
+        $target_file = $target_dir . randomName() . "." . $imageFileType;
 
-//     if (!count($errors)) {
-
-
-//         // haal og title, descrr,.... op via api
-//         $ogData = getOgViaApi($inputUrl);
-
-//         $ogtitle = @$ogData->hybridGraph->title ?? '';
-//         $ogdescription = @$ogData->hybridGraph->description ?? '';
-//         $ogimage = @$ogData->hybridGraph->image ?? '';;
-
-//         // insert into db
-//         $id = insertOgLink($inputUrl, $ogtitle, $ogdescription, $ogimage);
-
-//         if (!$id) {
-//             $errors[] = "Something unexplainable happened...";
-//         }
-//     }
-// }
-$items = getDbImages();
-
+        if (move_uploaded_file($_FILES["imgupload"]["tmp_name"], $target_file)) {
+            insertDbImage($target_file);
+            $success = "File uploaded.";
+            header("Location: index.php");
+            exit;
+        } else {
+            $errors[] = "An error has occurred.";
+        }
+    }
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -73,7 +89,13 @@ $items = getDbImages();
         <section>
             <h2>Upload Image</h2>
             <hr />
-
+            <?php if (isset($success)) : ?>
+                <div class="alert alert-success" role="alert">
+                    <ul>
+                        <li><?= $success; ?></li>
+                    </ul>
+                </div>
+            <?php endif; ?>
             <?php if (count($errors)) : ?>
                 <div class="alert alert-danger" role="alert">
                     <ul>
@@ -95,7 +117,7 @@ $items = getDbImages();
 
                 <div class="form-group mt-5">
                     <div>
-                        <button type="submit" class="btn btn-primary" name="formSubmit" style="width: 100%">Add</button>
+                        <button type="submit" class="btn btn-primary" name="formSubmit" style="width: 100%">Upload</button>
                     </div>
                 </div>
             </form>
@@ -112,7 +134,7 @@ $items = getDbImages();
                         <tr>
                             <th scope="col">#ID</th>
                             <th scope="col">Image</th>
-                            <th scope="col">Date</th>
+                            <th scope="col">Date Created</th>
                         </tr>
                     </thead>
                     <tbody>

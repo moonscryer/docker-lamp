@@ -21,7 +21,7 @@ function connectToDB()
 
 function getDbImages(): array
 {
-    $sql = "SELECT * FROM dbimages";
+    $sql = "SELECT * FROM images";
 
     $stmt = connectToDB()->prepare($sql);
     $stmt->execute();
@@ -31,7 +31,7 @@ function getDbImages(): array
 function insertDbImage(String $path): bool|int
 {
     $db = connectToDB();
-    $sql = "INSERT INTO dbimages(path) VALUES (:path)";
+    $sql = "INSERT INTO images(path) VALUES (:path)";
     $stmt = $db->prepare($sql);
     $stmt->execute([
         'path' => $path,
